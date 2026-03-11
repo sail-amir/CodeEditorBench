@@ -85,6 +85,35 @@ python vllm_inference.py \
 
 Remember that to fully understand these hyperparameters, you should consult the source code of `vllm_inference.py`.
 
+### Inference With a Custom Endpoint
+
+If your model is served behind a chat-completions compatible endpoint instead of local `vllm`, use `pangu_inference.py`. This keeps the same CodeEditorBench dataset and output format, but sends generation requests over HTTP.
+
+Example:
+
+```bash
+python pangu_inference.py \
+    --api_url "http://host:8087/csb-inner-service/rest/infers/your-id?path=/v1/chat/completions" \
+    --base_model "pangu_auto" \
+    --prompt_style "codellama-inst" \
+    --csb_token "your-csb-token" \
+    --auth_token "nokey" \
+    --dataset "debug" \
+    --input_data_dir "./data/" \
+    --output_data_dir "./greedy_result/" \
+    --batch_size 16 \
+    --request_concurrency 16 \
+    --num_of_sequences 1
+```
+
+- `api_url`: Full endpoint URL for your chat completions service.
+- `base_model`: Model name sent in the request payload.
+- `prompt_style`: Prompt wrapper style used by CodeEditorBench. Supported values are `wizardcoder`, `magicoder`, `octocoder`, `codefuse`, `deepseek`, `phind`, `codellama-inst`, `codellama`, and `bloom`.
+- `csb_token`: Optional custom header for endpoints that require it.
+- `request_concurrency`: Maximum number of in-flight HTTP requests to your endpoint.
+
+If your model is chat- or instruction-tuned and you are unsure which prompt style to use, start with `codellama-inst`.
+
 ### Filter Result
 
 We have provided an initial filtering script (the results inferred by code LLMs are usually not pure code data, but pure code data must be used in our OJ system for evaluation). Due to the different preferences of different models' outputs, filtering is quite challenging. The usage scope of this filtering script is limited to the models we evaluate (or models of the same series). We will further improve the script's extensibility in the future.
