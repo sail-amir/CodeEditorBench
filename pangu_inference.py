@@ -29,6 +29,14 @@ SUPPORTED_PROMPT_STYLES = {
 }
 
 
+async def run_with_timeout(awaitable, timeout_seconds):
+    # asyncio.timeout was added in Python 3.11. Fall back to wait_for for older runtimes.
+    if hasattr(asyncio, "timeout"):
+        async with asyncio.timeout(timeout_seconds):
+            return await awaitable
+    return await asyncio.wait_for(awaitable, timeout=timeout_seconds)
+
+
 def infer_prompt_style(base_model, prompt_type):
     if "Wizard" in base_model:
         return "wizardcoder", "group1"
@@ -146,10 +154,13 @@ async def generate_streaming(session, args, prompt):
 async def generate_with_retry(session, args, prompt):
     for attempt in range(1, args.max_retries + 1):
         try:
-            async with asyncio.timeout(args.request_timeout):
-                if args.stream:
-                    return await generate_streaming(session, args, prompt)
-                return await generate_non_streaming(session, args, prompt)
+            if args.stream:
+                return await run_with_timeout(
+                    generate_streaming(session, args, prompt), args.request_timeout
+                )
+            return await run_with_timeout(
+                generate_non_streaming(session, args, prompt), args.request_timeout
+            )
         except Exception as error:
             if attempt == args.max_retries:
                 return f"Error: Max attempts reached. Last error: {error}"
